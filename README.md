@@ -22,6 +22,8 @@ unless that guidance has changed recently, which is entirely possible:
 
     //+build tools
 
+    package tools
+
     import _ "github.com/shabbyrobe/go-enumgen/cmd/enumgen"
 
 Add some go generate:

@@ -6,6 +6,7 @@ import (
 	"go/ast"
 	"go/types"
 	"io"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -119,6 +120,10 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 			})
 		}
 	}
+
+	sort.Slice(cs.Values, func(i, j int) bool {
+		return cs.Values[i].Name < cs.Values[j].Name
+	})
 
 	return cs, nil
 }

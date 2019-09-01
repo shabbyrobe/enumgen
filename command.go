@@ -3,7 +3,6 @@ package enumgen
 import (
 	"flag"
 	"io/ioutil"
-	"os"
 	"strings"
 )
 
@@ -45,7 +44,7 @@ type Command struct {
 }
 
 func (cmd *Command) Flags(flags *flag.FlagSet) {
-	flags.StringVar(&cmd.pkg, "pkg", os.Getenv("GOPACKAGE"), "package name to search for types (defaults to GOPACKAGE)")
+	flags.StringVar(&cmd.pkg, "pkg", ".", "package name to search for types")
 	flags.StringVar(&cmd.out, "out", "enum_gen.go", "output file name")
 	flags.StringVar(&cmd.tags, "tags", "", "comma-separated list of build tags")
 	flags.BoolVar(&cmd.flag, "flag", true, "generate flag.Value")

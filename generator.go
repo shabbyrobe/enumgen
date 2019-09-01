@@ -109,6 +109,7 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 		if cur == nil {
 			continue
 		}
+
 		if cur.Type().String() != fullName {
 			continue
 		}
@@ -139,12 +140,12 @@ func (g *generator) parsePackage(pkgName string, tags []string) (*packageInfo, e
 		return nil, err
 	}
 	if len(pkgs) != 1 {
-		return nil, err
+		return nil, fmt.Errorf("package %q not found", pkgName)
 	}
 
 	pkg := pkgs[0]
 	return &packageInfo{
-		fullName: pkgName,
+		fullName: pkg.PkgPath,
 		name:     pkg.Name,
 		defs:     pkg.TypesInfo.Defs,
 	}, nil
@@ -281,7 +282,7 @@ func ({{.Receiver}} {{.Type}}) String() string {
 	switch {{.Receiver}} {
 	{{- range .Constants.Values }}
 	case {{ .Name }}:
-		return {{ printf "%q" .Name }}
+		return {{ .Value }}
 	{{- end }}
 	default:
 		return {{ printf "%q" .Unknown }}

@@ -1,8 +1,10 @@
 package enumgen
 
 import (
+	"bytes"
 	"flag"
 	"io/ioutil"
+	"os"
 	"strings"
 )
 
@@ -53,7 +55,8 @@ func (cmd *Command) Flags(flags *flag.FlagSet) {
 }
 
 func (cmd *Command) Synopsis() string { return "Generate enum-ish helpers from a bag of constants" }
-func (cmd *Command) Usage() string    { return Usage }
+
+func (cmd *Command) Usage() string { return Usage }
 
 func (cmd *Command) Run(args ...string) error {
 	if cmd.pkg == "" {
@@ -81,7 +84,6 @@ func (cmd *Command) Run(args ...string) error {
 		if err != nil {
 			return err
 		}
-
 		if err := g.generate(cns); err != nil {
 			return err
 		}
@@ -92,5 +94,18 @@ func (cmd *Command) Run(args ...string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(cmd.out, out, 0644)
+	var write bool
+	existing, err := ioutil.ReadFile(cmd.out)
+	if os.IsNotExist(err) || err == nil {
+		write = true
+	} else if err != nil {
+		return err
+	} else if !bytes.Equal(out, existing) {
+		write = true
+	}
+
+	if write {
+		return ioutil.WriteFile(cmd.out, out, 0644)
+	}
+	return nil
 }

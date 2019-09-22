@@ -42,6 +42,7 @@ type Command struct {
 	flag    bool
 	marshal bool
 	format  bool
+	str     bool
 	out     string
 }
 
@@ -50,6 +51,7 @@ func (cmd *Command) Flags(flags *flag.FlagSet) {
 	flags.StringVar(&cmd.out, "out", "enum_gen.go", "output file name")
 	flags.StringVar(&cmd.tags, "tags", "", "comma-separated list of build tags")
 	flags.BoolVar(&cmd.flag, "flag", true, "generate flag.Value")
+	flags.BoolVar(&cmd.str, "string", true, "generate String()")
 	flags.BoolVar(&cmd.marshal, "marshal", false, "EXPERIMENTAL: generate encoding.TextMarshaler/TextUnmarshaler")
 	flags.BoolVar(&cmd.format, "format", true, "run gofmt on result")
 }
@@ -71,6 +73,7 @@ func (cmd *Command) Run(args ...string) error {
 	g := &generator{
 		withFlagVal: cmd.flag,
 		withMarshal: cmd.marshal,
+		withString:  cmd.str,
 		format:      cmd.format,
 	}
 

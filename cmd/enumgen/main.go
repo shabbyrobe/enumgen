@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -18,9 +19,17 @@ func main() {
 func run() error {
 	bmc := enumgen.Command{}
 
-	var fs = &flag.FlagSet{}
+	var fs = flag.NewFlagSet("", flag.ContinueOnError)
+	fs.SetOutput(ioutil.Discard)
 	bmc.Flags(fs)
-	if err := fs.Parse(os.Args[1:]); err != nil {
+
+	args := os.Args[1:]
+	if len(args) == 0 {
+		help(&bmc, fs)
+		return nil
+	}
+
+	if err := fs.Parse(args); err != nil {
 		if err == flag.ErrHelp {
 			help(&bmc, fs)
 			return nil
@@ -41,5 +50,6 @@ func run() error {
 func help(bmc *enumgen.Command, fs *flag.FlagSet) {
 	fmt.Println(bmc.Usage())
 	fmt.Println("Flags:")
+	fs.SetOutput(os.Stdout)
 	fs.PrintDefaults()
 }

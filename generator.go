@@ -48,6 +48,7 @@ type generator struct {
 	format      bool
 	withFlagVal bool
 	withMarshal bool
+	withString  bool
 }
 
 func (g *generator) Output(fileName string, pkgInfo *packageInfo) ([]byte, error) {
@@ -159,6 +160,7 @@ func (g *generator) generate(cns *constants) error {
 		Type:        cns.Name,
 		WithMarshal: g.withMarshal,
 		WithFlagVal: g.withFlagVal,
+		WithString:  g.withString,
 	}
 	if err := genTpl.Execute(&g.buf, data); err != nil {
 		return err
@@ -187,6 +189,7 @@ type templateData struct {
 	Unknown     string
 	WithMarshal bool
 	WithFlagVal bool
+	WithString  bool
 }
 
 var genTpl = template.Must(template.New("").Parse(genTplText))
@@ -229,6 +232,7 @@ func ({{.Receiver}} {{.Type}}) IsValid() bool {
 `
 
 var intTplText = `
+{{ if .WithString }}
 func ({{.Receiver}} {{.Type}}) String() string {
 	switch {{.Receiver}} {
 	{{- range .Constants.Values }}
@@ -239,6 +243,7 @@ func ({{.Receiver}} {{.Type}}) String() string {
 		return {{ printf "%q" .Unknown }}
 	}
 }
+{{ end }}
 
 {{ if .WithMarshal }}
 func ({{.Receiver}} {{.Type}}) MarshalText() (text []byte, err error) {

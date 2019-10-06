@@ -43,12 +43,19 @@ type constants struct {
 	Values   []constantValue
 }
 
+type switches struct {
+	WithFlagVal bool
+	WithMarshal bool
+	WithString  bool
+	WithName    bool
+	WithLookup  bool
+	WithIsValid bool
+}
+
 type generator struct {
-	buf         bytes.Buffer
-	format      bool
-	withFlagVal bool
-	withMarshal bool
-	withString  bool
+	buf    bytes.Buffer
+	format bool
+	switches
 }
 
 func (g *generator) Output(fileName string, pkgInfo *packageInfo) ([]byte, error) {
@@ -154,13 +161,11 @@ func (g *generator) parsePackage(pkgName string, tags []string) (*packageInfo, e
 
 func (g *generator) generate(cns *constants) error {
 	var data = &templateData{
-		Receiver:    "v",
-		Unknown:     "<unknown>",
-		Constants:   cns,
-		Type:        cns.Name,
-		WithMarshal: g.withMarshal,
-		WithFlagVal: g.withFlagVal,
-		WithString:  g.withString,
+		switches:  g.switches,
+		Receiver:  "v",
+		Unknown:   "<unknown>",
+		Constants: cns,
+		Type:      cns.Name,
 	}
 	if err := genTpl.Execute(&g.buf, data); err != nil {
 		return err
@@ -183,13 +188,11 @@ func (g *generator) generate(cns *constants) error {
 }
 
 type templateData struct {
-	Receiver    string
-	Type        string
-	Constants   *constants
-	Unknown     string
-	WithMarshal bool
-	WithFlagVal bool
-	WithString  bool
+	switches
+	Receiver  string
+	Type      string
+	Constants *constants
+	Unknown   string
 }
 
 var genTpl = template.Must(template.New("").Parse(genTplText))
@@ -197,6 +200,7 @@ var intTpl = template.Must(template.New("").Parse(intTplText))
 var strTpl = template.Must(template.New("").Parse(strTplText))
 
 var genTplText = `
+{{ if .WithName }}
 func ({{.Receiver}} {{.Type}}) Name() string {
 	switch {{.Receiver}} {
 	{{- range .Constants.Values }}
@@ -207,7 +211,9 @@ func ({{.Receiver}} {{.Type}}) Name() string {
 		return ""
 	}
 }
+{{ end }}
 
+{{ if .WithLookup }}
 func ({{.Receiver}} {{.Type}}) Lookup(name string) (value {{.Type}}, ok bool) {
 	switch name {
 	{{- range .Constants.Values }}
@@ -218,7 +224,9 @@ func ({{.Receiver}} {{.Type}}) Lookup(name string) (value {{.Type}}, ok bool) {
 		return {{ .Constants.Empty }}, false
 	}
 }
+{{ end }}
 
+{{ if .WithIsValid }}
 func ({{.Receiver}} {{.Type}}) IsValid() bool {
 	switch {{.Receiver}} {
 	{{- range .Constants.Values }}
@@ -229,10 +237,11 @@ func ({{.Receiver}} {{.Type}}) IsValid() bool {
 	}
 	return true
 }
+{{ end }}
 `
 
 var intTplText = `
-{{ if .WithString }}
+{{ if or .WithString .WithFlagVal }}
 func ({{.Receiver}} {{.Type}}) String() string {
 	switch {{.Receiver}} {
 	{{- range .Constants.Values }}
@@ -283,6 +292,7 @@ func ({{.Receiver}} *{{.Type}}) Set(s string) error {
 `
 
 var strTplText = `
+{{ if or .WithString .WithFlagVal }}
 func ({{.Receiver}} {{.Type}}) String() string {
 	switch {{.Receiver}} {
 	{{- range .Constants.Values }}
@@ -293,6 +303,7 @@ func ({{.Receiver}} {{.Type}}) String() string {
 		return {{ printf "%q" .Unknown }}
 	}
 }
+{{ end }}
 
 {{ if .WithMarshal }}
 func ({{.Receiver}} {{.Type}}) MarshalText() (text []byte, err error) {

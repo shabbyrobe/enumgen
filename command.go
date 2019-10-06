@@ -37,23 +37,25 @@ func IsUsageError(err error) bool {
 }
 
 type Command struct {
-	tags    string
-	pkg     string
-	flag    bool
-	marshal bool
-	format  bool
-	str     bool
-	out     string
+	switches
+	tags   string
+	pkg    string
+	format bool
+	out    string
 }
 
 func (cmd *Command) Flags(flags *flag.FlagSet) {
 	flags.StringVar(&cmd.pkg, "pkg", ".", "package name to search for types")
 	flags.StringVar(&cmd.out, "out", "enum_gen.go", "output file name")
 	flags.StringVar(&cmd.tags, "tags", "", "comma-separated list of build tags")
-	flags.BoolVar(&cmd.flag, "flag", true, "generate flag.Value")
-	flags.BoolVar(&cmd.str, "string", true, "generate String()")
-	flags.BoolVar(&cmd.marshal, "marshal", false, "EXPERIMENTAL: generate encoding.TextMarshaler/TextUnmarshaler")
 	flags.BoolVar(&cmd.format, "format", true, "run gofmt on result")
+
+	flags.BoolVar(&cmd.switches.WithName, "name", true, "generate Name()")
+	flags.BoolVar(&cmd.switches.WithLookup, "lookup", true, "generate Lookup()")
+	flags.BoolVar(&cmd.switches.WithFlagVal, "flag", true, "generate flag.Value")
+	flags.BoolVar(&cmd.switches.WithIsValid, "isvalid", true, "generate IsValid()")
+	flags.BoolVar(&cmd.switches.WithString, "string", true, "generate String()")
+	flags.BoolVar(&cmd.switches.WithMarshal, "marshal", false, "EXPERIMENTAL: generate encoding.TextMarshaler/TextUnmarshaler")
 }
 
 func (cmd *Command) Synopsis() string { return "Generate enum-ish helpers from a bag of constants" }
@@ -71,10 +73,8 @@ func (cmd *Command) Run(args ...string) error {
 	tags := strings.Split(cmd.tags, ",")
 
 	g := &generator{
-		withFlagVal: cmd.flag,
-		withMarshal: cmd.marshal,
-		withString:  cmd.str,
-		format:      cmd.format,
+		switches: cmd.switches,
+		format:   cmd.format,
 	}
 
 	pkg, err := g.parsePackage(cmd.pkg, tags)

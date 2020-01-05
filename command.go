@@ -25,6 +25,11 @@ Methods generated:
 - encoding.TextMarshaler.MarshalText (with -textmarshal)
 - encoding.TextUnmarshaler.UnmarshalText (with -textmarshal)
 - flag.Value.Set(s string) (with -flagval)
+
+If the underlying type is a string:
+
+- ValuesString() (with -strvalues) - string of comma separated values (useful
+  for things like flag help)
 `
 
 type usageError string
@@ -56,6 +61,7 @@ func (cmd *Command) Flags(flags *flag.FlagSet) {
 	flags.BoolVar(&cmd.switches.WithIsValid, "isvalid", true, "generate IsValid()")
 	flags.BoolVar(&cmd.switches.WithString, "string", true, "generate String()")
 	flags.BoolVar(&cmd.switches.WithMarshal, "marshal", false, "EXPERIMENTAL: generate encoding.TextMarshaler/TextUnmarshaler")
+	flags.BoolVar(&cmd.switches.WithValuesString, "strvalues", false, "generate ValuesString() if underlying enum type is string")
 }
 
 func (cmd *Command) Synopsis() string { return "Generate enum-ish helpers from a bag of constants" }

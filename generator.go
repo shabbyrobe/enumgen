@@ -36,20 +36,22 @@ type constantValue struct {
 }
 
 type constants struct {
-	FullName string
-	Name     string
-	Empty    string
-	Kind     kind
-	Values   []constantValue
+	FullName     string
+	Name         string
+	Empty        string
+	Kind         kind
+	ValuesString string
+	Values       []constantValue
 }
 
 type switches struct {
-	WithFlagVal bool
-	WithMarshal bool
-	WithString  bool
-	WithName    bool
-	WithLookup  bool
-	WithIsValid bool
+	WithFlagVal      bool
+	WithMarshal      bool
+	WithString       bool
+	WithName         bool
+	WithLookup       bool
+	WithIsValid      bool
+	WithValuesString bool
 }
 
 type generator struct {
@@ -133,6 +135,14 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 	sort.Slice(cs.Values, func(i, j int) bool {
 		return cs.Values[i].Name < cs.Values[j].Name
 	})
+
+	if cs.Kind == stringKind {
+		vstrs := make([]string, 0, len(cs.Values))
+		for _, v := range cs.Values {
+			vstrs = append(vstrs, v.Value)
+		}
+		cs.ValuesString = strings.Join(vstrs, ", ")
+	}
 
 	return cs, nil
 }
@@ -337,6 +347,12 @@ func ({{.Receiver}} *{{.Type}}) Set(s string) error {
 		return fmt.Errorf("enum %T received invalid value %q", {{.Receiver}}, s)
 	}
 	return nil
+}
+{{ end }}
+
+{{ if .WithValuesString }}
+func ({{.Receiver}} {{.Type}}) ValuesString() string {
+	return {{.Constants.ValuesString | printf "%q"}}
 }
 {{ end }}
 `

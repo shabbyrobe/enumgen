@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/constant"
 	"go/types"
 	"io"
 	"sort"
@@ -139,7 +140,7 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 	if cs.Kind == stringKind {
 		vstrs := make([]string, 0, len(cs.Values))
 		for _, v := range cs.Values {
-			vstrs = append(vstrs, v.Value)
+			vstrs = append(vstrs, constant.StringVal(v.Const.Val()))
 		}
 		cs.ValuesString = strings.Join(vstrs, ", ")
 	}

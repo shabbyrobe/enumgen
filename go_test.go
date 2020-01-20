@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestNoDeps(t *testing.T) {
+func TestGoMod(t *testing.T) {
 	if os.Getenv("ENUMGEN_SKIP_MOD") != "" {
 		// Use this to avoid this check if you need to use spew.Dump in tests:
 		t.Skip()

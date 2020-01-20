@@ -30,7 +30,7 @@ to do with enums or this project, it's just how you tell go modules about this t
 
 package tools
 
-import _ "github.com/shabbyrobe/go-enumgen/cmd/enumgen"
+import _ "github.com/shabbyrobe/enumgen/cmd/enumgen"
 ```
 
 Add you some go generate into the same package as your enums (not in

@@ -17,19 +17,30 @@ Inputs:
 The <input> argument is a list of types contained in the current package, to which
 methods will be added.
 
-Methods generated:
+Things that are always generated:
+    func (t <T>) String() string
 
-- fmt.Stringer.String()
-- IsValid() bool
-- Lookup(str string) <T>
-- encoding.TextMarshaler.MarshalText (with -textmarshal)
-- encoding.TextUnmarshaler.UnmarshalText (with -textmarshal)
-- flag.Value.Set(s string) (with -flagval)
+    func (t <T>) IsValid() bool
+        Is the value in 't' a member of the set of constants?
+        
+    func (t <T>) Lookup(name string) (<T>, ok bool)
+        Find the constant for 'name'. 'ok' is false if not found.
 
-If the underlying type is a string:
+If -textmarshal is passed:
+    func (t <T>)  MarshalText() (text []byte, err error)
+    func (t *<T>) UnmarshalText(text []byte) (err error)
 
-- ValuesString() (with -strvalues) - string of comma separated values (useful
-  for things like flag help)
+If -flag=(val|get) are passed (implements flag.Value):
+    func (t <T>) Set(s string) error
+
+If -flag=get is passed (implements flag.Getter):
+    func (t <T>) Get() interface{}
+
+If -strvalues is passed and the underlying type of your enum is a string:
+    func (t <T>) ValuesString() string
+        String of all constant values, separated by commas. This is useful for
+        things like flag help, where you may want to show the list of possible
+        options.
 `
 
 type usageError string
@@ -50,6 +61,8 @@ type Command struct {
 }
 
 func (cmd *Command) Flags(flags *flag.FlagSet) {
+	cmd.switches.FlagMode = flagVal
+
 	flags.StringVar(&cmd.pkg, "pkg", ".", "package name to search for types")
 	flags.StringVar(&cmd.out, "out", "enum_gen.go", "output file name")
 	flags.StringVar(&cmd.tags, "tags", "", "comma-separated list of build tags")
@@ -57,7 +70,7 @@ func (cmd *Command) Flags(flags *flag.FlagSet) {
 
 	flags.BoolVar(&cmd.switches.WithName, "name", true, "generate Name()")
 	flags.BoolVar(&cmd.switches.WithLookup, "lookup", true, "generate Lookup()")
-	flags.BoolVar(&cmd.switches.WithFlagVal, "flag", true, "generate flag.Value")
+	flags.Var(&cmd.switches.FlagMode, "flag", "'val': flag.Value, 'get': flag.Getter, or 'none'. Default: val")
 	flags.BoolVar(&cmd.switches.WithIsValid, "isvalid", true, "generate IsValid()")
 	flags.BoolVar(&cmd.switches.WithString, "string", true, "generate String()")
 	flags.BoolVar(&cmd.switches.WithMarshal, "marshal", false, "EXPERIMENTAL: generate encoding.TextMarshaler/TextUnmarshaler")

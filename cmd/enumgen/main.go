@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/shabbyrobe/go-enumgen"
+	"github.com/shabbyrobe/enumgen"
 )
 
 func main() {

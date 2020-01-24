@@ -65,7 +65,33 @@ type constants struct {
 	Empty        string
 	Kind         kind
 	ValuesString string
-	Values       []constantValue
+	IsNamedType  bool
+
+	values     []constantValue
+	nameOrder  []constantValue
+	valueOrder []constantValue
+}
+
+func (cns *constants) NameOrder() []constantValue {
+	if cns.nameOrder == nil {
+		cns.nameOrder = make([]constantValue, len(cns.values))
+		copy(cns.nameOrder, cns.values)
+		sort.Slice(cns.nameOrder, func(i, j int) bool {
+			return cns.nameOrder[i].Name < cns.nameOrder[j].Name
+		})
+	}
+	return cns.nameOrder
+}
+
+func (cns constants) ValueOrder() []constantValue {
+	if cns.valueOrder == nil {
+		cns.valueOrder = make([]constantValue, len(cns.values))
+		copy(cns.valueOrder, cns.values)
+		sort.Slice(cns.valueOrder, func(i, j int) bool {
+			return cns.valueOrder[i].Value < cns.valueOrder[j].Value
+		})
+	}
+	return cns.valueOrder
 }
 
 type switches struct {
@@ -75,6 +101,7 @@ type switches struct {
 	WithName         bool
 	WithLookup       bool
 	WithIsValid      bool
+	WithValues       bool
 	WithValuesString bool
 }
 
@@ -121,9 +148,12 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 	}
 
 	fullName := pkg.fullName + "." + typeName
+
+	_, isNamed := def.Type().(*types.Named)
 	cs := &constants{
-		FullName: fullName,
-		Name:     typeName,
+		FullName:    fullName,
+		Name:        typeName,
+		IsNamedType: isNamed,
 	}
 
 	underlying := def.Type().Underlying().(*types.Basic).Info()
@@ -148,7 +178,7 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 			continue
 		}
 		if cns, ok := cur.(*types.Const); ok {
-			cs.Values = append(cs.Values, constantValue{
+			cs.values = append(cs.values, constantValue{
 				Name:  cns.Name(),
 				Value: cns.Val().ExactString(),
 				Const: cns,
@@ -156,13 +186,13 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 		}
 	}
 
-	sort.Slice(cs.Values, func(i, j int) bool {
-		return cs.Values[i].Name < cs.Values[j].Name
+	sort.Slice(cs.values, func(i, j int) bool {
+		return cs.values[i].Value < cs.values[j].Value
 	})
 
 	if cs.Kind == stringKind {
-		vstrs := make([]string, 0, len(cs.Values))
-		for _, v := range cs.Values {
+		vstrs := make([]string, 0, len(cs.values))
+		for _, v := range cs.ValueOrder() {
 			vstrs = append(vstrs, constant.StringVal(v.Const.Val()))
 		}
 		cs.ValuesString = strings.Join(vstrs, ", ")
@@ -224,175 +254,3 @@ func (g *generator) generate(cns *constants) error {
 
 	return nil
 }
-
-type templateData struct {
-	switches
-	Receiver  string
-	Type      string
-	Constants *constants
-	Unknown   string
-}
-
-var genTpl = template.Must(template.New("").Parse(genTplText))
-var intTpl = template.Must(template.New("").Parse(intTplText))
-var strTpl = template.Must(template.New("").Parse(strTplText))
-
-var genTplText = `
-{{ if .WithName }}
-func ({{.Receiver}} {{.Type}}) Name() string {
-	switch {{.Receiver}} {
-	{{- range .Constants.Values }}
-	case {{ .Name }}:
-		return {{ printf "%q" .Name }}
-	{{- end }}
-	default:
-		return ""
-	}
-}
-{{ end }}
-
-{{ if .WithLookup }}
-func ({{.Receiver}} {{.Type}}) Lookup(name string) (value {{.Type}}, ok bool) {
-	switch name {
-	{{- range .Constants.Values }}
-	case {{ printf "%q" .Name }}:
-		return {{.Name}}, true
-	{{- end }}
-	default:
-		return {{ .Constants.Empty }}, false
-	}
-}
-{{ end }}
-
-{{ if .WithIsValid }}
-func ({{.Receiver}} {{.Type}}) IsValid() bool {
-	switch {{.Receiver}} {
-	{{- range .Constants.Values }}
-	case {{ .Name }}:
-	{{- end }}
-	default:
-		return false
-	}
-	return true
-}
-{{ end }}
-`
-
-var intTplText = `
-{{ if .WithString }}
-func ({{.Receiver}} {{.Type}}) String() string {
-	switch {{.Receiver}} {
-	{{- range .Constants.Values }}
-	case {{ .Name }}:
-		return "{{ .Name }}({{.Value}})"
-	{{- end }}
-	default:
-		return {{ printf "%q" .Unknown }}
-	}
-}
-{{ end }}
-
-{{ if .WithMarshal }}
-func ({{.Receiver}} {{.Type}}) MarshalText() (text []byte, err error) {
-	switch {{.Receiver}} {
-	{{- range .Constants.Values }}
-	case {{ .Name }}:
-		return []byte({{printf "%q" .Value}}), nil
-	{{- end }}
-	default:
-		return fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, s)
-	}
-}
-
-func ({{.Receiver}} *{{.Type}}) UnmarshalText(text []byte) (err error) {
-	switch string({{.Receiver}}) {
-	{{- range .Constants.Values }}
-	case {{ printf "%q" .Name }}, {{ printf "%q" .Value }}:
-		*{{$.Receiver}} = {{.Name}}
-	{{- end }}
-	default:
-		return fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, s)
-	}
-	return nil
-}
-{{ end }}
-
-{{ if .FlagMode.WithFlag }}
-func ({{.Receiver}} *{{.Type}}) Set(s string) error {
-	parsed, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return err
-	}
-	*{{.Receiver}} = {{.Type}}(parsed)
-	return nil
-}
-{{ end }}
-
-{{ if eq .FlagMode "get" }}
-func ({{.Receiver}} {{.Type}}) Get() interface{} {
-	return {{.Receiver}}
-}
-{{ end }}
-`
-
-var strTplText = `
-{{ if .WithString }}
-func ({{.Receiver}} {{.Type}}) String() string {
-	switch {{.Receiver}} {
-	{{- range .Constants.Values }}
-	case {{ .Name }}:
-		return {{ .Value }}
-	{{- end }}
-	default:
-		return {{ printf "%q" .Unknown }}
-	}
-}
-{{ end }}
-
-{{ if .WithMarshal }}
-func ({{.Receiver}} {{.Type}}) MarshalText() (text []byte, err error) {
-	switch {{.Receiver}} {
-	{{- range .Constants.Values }}
-	case {{ .Name }}:
-		return []byte({{.Name}}), nil
-	{{- end }}
-	default:
-		return fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, s)
-	}
-}
-
-func ({{.Receiver}} *{{.Type}}) UnmarshalText(text []byte) (err error) {
-	switch string({{.Receiver}}) {
-	{{- range .Constants.Values }}
-	case {{ .Value }}:
-		*{{$.Receiver}} = {{.Name}}
-	{{- end }}
-	default:
-		return fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, s)
-	}
-	return nil
-}
-{{ end }}
-
-{{ if .FlagMode.WithFlag }}
-func ({{.Receiver}} *{{.Type}}) Set(s string) error {
-	*{{.Receiver}} = {{.Type}}(s)
-	if !{{.Receiver}}.IsValid() {
-		return fmt.Errorf("enum %T received invalid value %q", {{.Receiver}}, s)
-	}
-	return nil
-}
-{{ end }}
-
-{{ if eq .FlagMode "get" }}
-func ({{.Receiver}} {{.Type}}) Get() interface{} {
-	return {{.Receiver}}
-}
-{{ end }}
-
-{{ if .WithValuesString }}
-func ({{.Receiver}} {{.Type}}) ValuesString() string {
-	return {{.Constants.ValuesString | printf "%q"}}
-}
-{{ end }}
-`

@@ -12,8 +12,6 @@ const Usage = `enumgen: turn a bag of constants into something a bit more useful
 
 Usage: enumgen [options] <input>...
 
-Inputs:
-
 The <input> argument is a list of types contained in the current package, to which
 methods will be added.
 
@@ -25,6 +23,9 @@ Things that are always generated:
         
     func (t <T>) Lookup(name string) (<T>, ok bool)
         Find the constant for 'name'. 'ok' is false if not found.
+
+    var <T>Values = []T{...}
+        Slice containing all values for this enum, sorted by value (not name).
 
 If -textmarshal is passed:
     func (t <T>)  MarshalText() (text []byte, err error)
@@ -75,6 +76,7 @@ func (cmd *Command) Flags(flags *flag.FlagSet) {
 	flags.BoolVar(&cmd.switches.WithString, "string", true, "generate String()")
 	flags.BoolVar(&cmd.switches.WithMarshal, "marshal", false, "EXPERIMENTAL: generate encoding.TextMarshaler/TextUnmarshaler")
 	flags.BoolVar(&cmd.switches.WithValuesString, "strvalues", false, "generate ValuesString() if underlying enum type is string")
+	flags.BoolVar(&cmd.switches.WithValues, "values", true, "generate 'var <T>Values = []<T>{}' slice")
 }
 
 func (cmd *Command) Synopsis() string { return "Generate enum-ish helpers from a bag of constants" }

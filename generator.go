@@ -88,10 +88,28 @@ type constants struct {
 	Kind         kind
 	ValuesString string
 	IsNamedType  bool
+	Basic        *types.Basic
 
 	values     []constantValue
 	nameOrder  []constantValue
 	valueOrder []constantValue
+}
+
+func (cns *constants) IntParseBits() int {
+	switch cns.Basic.Kind() {
+	case types.Int8, types.Uint8:
+		return 8
+	case types.Int16, types.Uint16:
+		return 16
+	case types.Int32, types.Uint32:
+		return 32
+	case types.Int64, types.Uint64:
+		return 64
+	case types.Int, types.Uint:
+		return 0
+	default:
+		return -1
+	}
 }
 
 func (cns *constants) NameOrder() []constantValue {
@@ -166,7 +184,8 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 		IsNamedType: isNamed,
 	}
 
-	underlying := def.Type().Underlying().(*types.Basic).Info()
+	cs.Basic = def.Type().Underlying().(*types.Basic)
+	underlying := cs.Basic.Info()
 	if underlying&types.IsInteger != 0 {
 		cs.Empty = "0"
 		cs.Kind = intKind

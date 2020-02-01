@@ -124,7 +124,7 @@ func ({{.Receiver}} *{{.Type}}) Set(s string) error {
 		*{{$.Receiver}} = {{ .Name }}
 	{{- end }}
 	default:
-		parsed, err := strconv.ParseInt(s, 10, 64)
+		parsed, err := strconv.ParseInt(s, 10, {{ .Constants.IntParseBits }})
 		if err != nil {
 			return err
 		}

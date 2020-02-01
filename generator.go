@@ -53,10 +53,32 @@ type packageInfo struct {
 	defs     map[*ast.Ident]types.Object
 }
 
+func (pkg *packageInfo) findType(name string) (types.Object, error) {
+	var def types.Object
+	for _, cur := range pkg.defs {
+		if cur == nil {
+			continue
+		}
+		if _, ok := cur.Type().(*types.Named); !ok {
+			continue
+		}
+		if cur.Name() == name {
+			def = cur
+			break
+		}
+	}
+	if def == nil {
+		return nil, fmt.Errorf("enumgen: could not find def for %s", name)
+	}
+
+	return def, nil
+}
+
 type constantValue struct {
-	Name  string
-	Value string
-	Const *types.Const
+	Name      string
+	LowerName string
+	Value     string
+	Const     *types.Const
 }
 
 type constants struct {
@@ -130,21 +152,9 @@ func (g *generator) Output(fileName string, pkgInfo *packageInfo) ([]byte, error
 }
 
 func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, error) {
-	var def types.Object
-	for _, cur := range pkg.defs {
-		if cur == nil {
-			continue
-		}
-		if _, ok := cur.Type().(*types.Named); !ok {
-			continue
-		}
-		if cur.Name() == typeName {
-			def = cur
-			break
-		}
-	}
-	if def == nil {
-		return nil, fmt.Errorf("could not find def for %s", typeName)
+	def, err := pkg.findType(typeName)
+	if err != nil {
+		return nil, err
 	}
 
 	fullName := pkg.fullName + "." + typeName
@@ -169,6 +179,7 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 		return nil, fmt.Errorf("type %q is not a string or integer type", typeName)
 	}
 
+	var seenNames = map[string]bool{}
 	for _, cur := range pkg.defs {
 		if cur == nil {
 			continue
@@ -177,11 +188,18 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 		if cur.Type().String() != fullName {
 			continue
 		}
+
 		if cns, ok := cur.(*types.Const); ok {
+			lowerName := strings.ToLower(cns.Name())
+			if seenNames[lowerName] {
+				return nil, fmt.Errorf("enumgen: type %q contained duplicate constant name %q (after case is discarded)", typeName, cns.Name())
+			}
+			seenNames[lowerName] = true
 			cs.values = append(cs.values, constantValue{
-				Name:  cns.Name(),
-				Value: cns.Val().ExactString(),
-				Const: cns,
+				Name:      cns.Name(),
+				LowerName: lowerName,
+				Value:     cns.Val().ExactString(),
+				Const:     cns,
 			})
 		}
 	}
@@ -190,12 +208,14 @@ func (g *generator) extract(pkg *packageInfo, typeName string) (*constants, erro
 		return cs.values[i].Value < cs.values[j].Value
 	})
 
-	if cs.Kind == stringKind {
-		vstrs := make([]string, 0, len(cs.values))
-		for _, v := range cs.ValueOrder() {
-			vstrs = append(vstrs, constant.StringVal(v.Const.Val()))
+	{ // Build ValuesString:
+		if cs.Kind == stringKind {
+			vstrs := make([]string, 0, len(cs.values))
+			for _, v := range cs.ValueOrder() {
+				vstrs = append(vstrs, constant.StringVal(v.Const.Val()))
+			}
+			cs.ValuesString = strings.Join(vstrs, ", ")
 		}
-		cs.ValuesString = strings.Join(vstrs, ", ")
 	}
 
 	return cs, nil

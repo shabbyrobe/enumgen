@@ -15,6 +15,9 @@ Usage: enumgen [options] <input>...
 The <input> argument is a list of types contained in the current package, to which
 methods will be added.
 
+The constant names used for <input> are case-insensitive - if two constants share
+a name when case is discarded, an error is raised.
+
 Things that are always generated:
     func (t <T>) String() string
 
@@ -33,6 +36,9 @@ If -textmarshal is passed:
 
 If -flag=(val|get) are passed (implements flag.Value):
     func (t <T>) Set(s string) error
+
+If -flag=(val|get) and the underlying type is an int, Set() will accept the
+enum's names with any casing.
 
 If -flag=get is passed (implements flag.Getter):
     func (t <T>) Get() interface{}

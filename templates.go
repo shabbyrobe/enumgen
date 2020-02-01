@@ -118,11 +118,18 @@ func ({{.Receiver}} *{{.Type}}) UnmarshalText(text []byte) (err error) {
 const genIntWithFlag = `
 {{ if .FlagMode.WithFlag }}
 func ({{.Receiver}} *{{.Type}}) Set(s string) error {
-	parsed, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return err
+	switch strings.ToLower(s) {
+	{{- range .Constants.NameOrder }}
+	case {{ printf "%q" .LowerName }}:
+		*{{$.Receiver}} = {{ .Name }}
+	{{- end }}
+	default:
+		parsed, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			return err
+		}
+		*{{$.Receiver}} = {{.Type}}(parsed)
 	}
-	*{{.Receiver}} = {{.Type}}(parsed)
 	return nil
 }
 {{ end }}

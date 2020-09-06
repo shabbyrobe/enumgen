@@ -97,18 +97,18 @@ func ({{.Receiver}} {{.Type}}) MarshalText() (text []byte, err error) {
 		return []byte({{printf "%q" .Value}}), nil
 	{{- end }}
 	default:
-		return fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, s)
+		return nil, fmt.Errorf("could not marshal enum %T containing invalid value %v", {{.Receiver}}, {{.Receiver}})
 	}
 }
 
 func ({{.Receiver}} *{{.Type}}) UnmarshalText(text []byte) (err error) {
-	switch string({{.Receiver}}) {
+	switch string(text) {
 	{{- range .Constants.NameOrder }}
 	case {{ printf "%q" .Name }}, {{ printf "%q" .Value }}:
 		*{{$.Receiver}} = {{.Name}}
 	{{- end }}
 	default:
-		return fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, s)
+		return fmt.Errorf("could not marshal enum %T containing invalid value %v", {{.Receiver}}, {{.Receiver}})
 	}
 	return nil
 }
@@ -167,18 +167,18 @@ func ({{.Receiver}} {{.Type}}) MarshalText() (text []byte, err error) {
 		return []byte({{.Name}}), nil
 	{{- end }}
 	default:
-		return fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, s)
+		return nil, fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, {{.Receiver}})
 	}
 }
 
 func ({{.Receiver}} *{{.Type}}) UnmarshalText(text []byte) (err error) {
-	switch string({{.Receiver}}) {
+	switch string(text) {
 	{{- range .Constants.NameOrder }}
 	case {{ .Value }}:
 		*{{$.Receiver}} = {{.Name}}
 	{{- end }}
 	default:
-		return fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, s)
+		return fmt.Errorf("could not marshal enum %T containing invalid value %q", {{.Receiver}}, string(text))
 	}
 	return nil
 }
